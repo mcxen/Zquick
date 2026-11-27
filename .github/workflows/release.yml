@@ -1,0 +1,155 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "要发布的版本号标签（例如 v1.0.0）"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Resolve Version
+        id: ver
+        shell: pwsh
+        run: |
+          $tag = if ("${{ github.event_name }}" -eq "workflow_dispatch") { "${{ inputs.tag }}" } else { "${{ github.ref_name }}" }
+          if (-not $tag.StartsWith("v")) { $tag = "v$tag" }
+          $version = $tag.TrimStart("v")
+          $numericBase = ($version -split "-")[0]
+          $parts = $numericBase.Split(".")
+          while ($parts.Count -lt 3) { $parts += "0" }
+          $assemblyVer = "$($parts[0]).$($parts[1]).$($parts[2]).0"
+          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "assembly_ver=$assemblyVer" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Tag: $tag | Version: $version | AssemblyVersion: $assemblyVer"
+
+      - name: Publish Standalone Single-File (win-x64)
+        run: |
+          dotnet publish Zquick.csproj -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:Version=${{ steps.ver.outputs.version }} `
+            -p:InformationalVersion=${{ steps.ver.outputs.version }} `
+            -p:AssemblyVersion=${{ steps.ver.outputs.assembly_ver }} `
+            -p:FileVersion=${{ steps.ver.outputs.assembly_ver }} `
+            -o publish/standalone
+        shell: pwsh
+
+      - name: Publish Light Single-File (win-x64)
+        run: |
+          dotnet publish Zquick.csproj -c Release -r win-x64 --self-contained false `
+            -p:PublishSingleFile=true `
+            -p:Version=${{ steps.ver.outputs.version }} `
+            -p:InformationalVersion=${{ steps.ver.outputs.version }} `
+            -p:AssemblyVersion=${{ steps.ver.outputs.assembly_ver }} `
+            -p:FileVersion=${{ steps.ver.outputs.assembly_ver }} `
+            -o publish/light
+        shell: pwsh
+
+      - name: Build Windows Installer (Inno Setup 6)
+        shell: pwsh
+        run: |
+          $iscc = @(
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+            "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+          if (-not $iscc) {
+            Write-Host "Inno Setup 6 not pre-installed, installing via Chocolatey..."
+            choco install innosetup -y --no-progress
+            $iscc = @(
+              "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+              "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
+            ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          }
+
+          if (-not $iscc) {
+            throw "Failed to locate ISCC.exe after installation."
+          }
+
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          & $iscc "/DMyAppVersion=${{ steps.ver.outputs.version }}" "installer\Zquick.iss"
+          if ($LASTEXITCODE -ne 0) {
+            throw "ISCC.exe failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Package Portable Archives & Checksums
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.ver.outputs.version }}"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+
+          $portableZip = "dist\Zquick-Portable-v$ver-win-x64.zip"
+          $lightZip = "dist\Zquick-Light-v$ver-win-x64.zip"
+
+          Compress-Archive -Path "publish\standalone\Zquick.exe", "README.md", "LICENSE" -DestinationPath $portableZip -Force
+          Compress-Archive -Path "publish\light\Zquick.exe", "README.md", "LICENSE" -DestinationPath $lightZip -Force
+
+          $files = Get-ChildItem -Path "dist" -File | Where-Object { $_.Name -ne "SHA256SUMS.txt" } | Sort-Object Name
+          $sums = foreach ($f in $files) {
+            $hash = (Get-FileHash -Path $f.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($f.Name)"
+          }
+          $sums | Set-Content -Path "dist\SHA256SUMS.txt" -Encoding UTF8
+          Get-Content "dist\SHA256SUMS.txt"
+
+      - name: Create or Update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.ver.outputs.tag }}"
+          $ver = "${{ steps.ver.outputs.version }}"
+
+          $notes = @"
+          ## Zquick v$ver 发布说明
+
+          ### 下载文件说明
+          - **\`Zquick-Setup-v$ver-win-x64.exe\`**（推荐）：Windows 安装包，内置独立运行时，支持安装向导自动注册 Explorer 右键菜单及控制面板干净卸载。
+          - **\`Zquick-Portable-v$ver-win-x64.zip\`**：免安装单文件便携版（无需预先安装 .NET 8 Runtime），解压即用。
+          - **\`Zquick-Light-v$ver-win-x64.zip\`**：轻量单文件版（体积较小，需系统已安装 [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)）。
+          - **\`SHA256SUMS.txt\`**：所有发布文件的 SHA-256 校验值。
+
+          ### 快速上手
+          1. 运行安装程序（或解压便携版运行 \`Zquick.exe\`）。
+          2. 如需打包/视频无损旋转功能，请在管理界面的 **全局设置** 中确认 \`7z.exe\` / \`ffmpeg.exe\` 路径。
+          3. 点击右上角 **「同步到右键菜单」** 后，在资源管理器中右键任意文件夹或空白处即可使用（Win11 在「显示更多选项」内）。
+          "@
+
+          $notesFile = Join-Path $env:RUNNER_TEMP "release-notes.md"
+          $notes | Set-Content -Path $notesFile -Encoding UTF8
+
+          $assets = Get-ChildItem -Path "dist" -File | ForEach-Object { $_.FullName }
+
+          $exists = $false
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) { $exists = $true }
+
+          if ($exists) {
+            gh release edit $tag --title "Zquick $tag" --notes-file $notesFile
+            gh release upload $tag @assets --clobber
+          } else {
+            gh release create $tag @assets --title "Zquick $tag" --notes-file $notesFile
+          }
