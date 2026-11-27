@@ -35,13 +35,16 @@ public class RunProgressForm : Form
         _action = action;
         _folderPath = PathGuard.NormalizeFolderPath(folderPath);
 
-        UiHelper.ApplyFormDefaults(this, $"Zquick - {action.Title}", new Size(760, 520));
-        MinimumSize = new Size(560, 380);
+        UiHelper.ApplyFormDefaults(
+            this,
+            $"Zquick - {action.Title}",
+            new Size(780, 540),
+            new Size(560, 380));
 
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(12),
+            Padding = UiHelper.SPad(12),
             RowCount = 4,
             ColumnCount = 1
         };
@@ -55,7 +58,7 @@ public class RunProgressForm : Form
             Text = $"动作：{action.Title}\n目录：{_folderPath}",
             Font = UiHelper.BoldFont,
             AutoSize = true,
-            Margin = new Padding(0, 0, 0, 6)
+            Margin = UiHelper.SPad(0, 0, 0, 6)
         };
         root.Controls.Add(lblHeader, 0, 0);
 
@@ -70,12 +73,12 @@ public class RunProgressForm : Form
         {
             Text = "准备就绪...",
             AutoSize = true,
-            Margin = new Padding(0, 0, 0, 4)
+            Margin = UiHelper.SPad(0, 0, 0, 4)
         };
         _progressBar = new ProgressBar
         {
             Dock = DockStyle.Top,
-            Height = 20,
+            Height = UiHelper.S(22),
             Minimum = 0,
             Maximum = 100,
             Value = 0
@@ -93,32 +96,24 @@ public class RunProgressForm : Form
             WordWrap = false,
             Font = UiHelper.MonoFont,
             BackColor = Color.FromArgb(250, 250, 250),
-            Margin = new Padding(0, 8, 0, 8)
+            Margin = UiHelper.SPad(0, 8, 0, 8)
         };
         root.Controls.Add(_txtLog, 0, 2);
 
         var footer = new FlowLayoutPanel
         {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.RightToLeft,
-            AutoSize = true
+            Anchor = AnchorStyles.Right,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink
         };
 
-        _btnClose = new Button
-        {
-            Text = "关闭",
-            Width = 90,
-            Height = 30,
-            Enabled = false
-        };
-        _btnClose.Click += (_, _) => Close();
+        _btnUndo = UiHelper.CreateButton("撤销本次重命名", 136, 30);
+        _btnUndo.Enabled = false;
+        _btnUndo.Click += OnUndoExecutedClick;
 
-        _btnCancel = new Button
-        {
-            Text = "停止取消",
-            Width = 95,
-            Height = 30
-        };
+        _btnCancel = UiHelper.CreateButton("停止取消", 96, 30);
         _btnCancel.Click += (_, _) =>
         {
             _btnCancel.Enabled = false;
@@ -126,18 +121,14 @@ public class RunProgressForm : Form
             _cts.Cancel();
         };
 
-        _btnUndo = new Button
-        {
-            Text = "撤销本次重命名",
-            Width = 130,
-            Height = 30,
-            Enabled = false
-        };
-        _btnUndo.Click += OnUndoExecutedClick;
+        _btnClose = UiHelper.CreateButton("关闭", 90, 30);
+        _btnClose.Enabled = false;
+        _btnClose.Margin = new Padding(0);
+        _btnClose.Click += (_, _) => Close();
 
-        footer.Controls.Add(_btnClose);
-        footer.Controls.Add(_btnCancel);
         footer.Controls.Add(_btnUndo);
+        footer.Controls.Add(_btnCancel);
+        footer.Controls.Add(_btnClose);
         root.Controls.Add(footer, 0, 3);
 
         Controls.Add(root);
@@ -193,7 +184,6 @@ public class RunProgressForm : Form
             bool executed = await RunActionAsync(_action, isPipelineStep: false);
             if (!executed && _executedBatches.Count == 0 && _txtLog.TextLength == 0)
             {
-                // 用户在启动弹窗时直接点了取消，无日志则静默退出
                 _isRunning = false;
                 Close();
                 return;
@@ -379,13 +369,13 @@ public class RunProgressForm : Form
                 return false;
             }
 
-            if (PathGuard.ContainsInvalidFileNameChars(runtimePrefix))
+            if (PathGuard.ContainsInvalidFileNameChars(runtimePrefix!))
             {
                 MessageBox.Show(this, "前缀包含 Windows 非法文件名字符（如 \\ / : * ? \" < > |）。", "无效前缀", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
-            _configService.RecordRecentPrefix(_config, runtimePrefix);
+            _configService.RecordRecentPrefix(_config, runtimePrefix!);
         }
 
         _lblStatus.Text = "正在扫描重命名目标...";
@@ -480,7 +470,7 @@ public class RunProgressForm : Form
 
         try
         {
-            BeginInvoke(() => AppendLog(line));
+            BeginInvoke((Action)(() => AppendLog(line)));
         }
         catch
         {
@@ -507,7 +497,7 @@ public class RunProgressForm : Form
 
         try
         {
-            BeginInvoke(() => UpdateProgress(current, total));
+            BeginInvoke((Action)(() => UpdateProgress(current, total)));
         }
         catch
         {
@@ -523,7 +513,7 @@ public class RunProgressForm : Form
             return;
         }
 
-        int percent = Math.Clamp((int)Math.Round(current * 100.0 / total), 0, 100);
+        int percent = Math.Max(0, Math.Min(100, (int)Math.Round(current * 100.0 / total)));
         _progressBar.Value = percent;
         _lblStatus.Text = $"进度：{current} / {total} ({percent}%)";
     }

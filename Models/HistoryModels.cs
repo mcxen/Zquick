@@ -9,12 +9,12 @@ public class RenameRecord
 
 public class RenameBatch
 {
-    public string Id { get; set; } = Guid.NewGuid().ToString("N")[..12];
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
+    public string Id { get; set; } = Guid.NewGuid().ToString("N").Substring(0, 12);
+    public string CreatedAt { get; set; } = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
     public string ActionTitle { get; set; } = "";
     public string TargetDirectory { get; set; } = "";
     public bool Undone { get; set; }
-    public DateTimeOffset? UndoneAt { get; set; }
+    public string UndoneAt { get; set; } = "";
     public List<RenameRecord> Records { get; set; } = new();
 }
 

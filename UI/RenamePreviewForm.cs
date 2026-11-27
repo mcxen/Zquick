@@ -12,13 +12,16 @@ public class RenamePreviewForm : Form
     public RenamePreviewForm(string actionTitle, string targetFolder, List<RenamePlanItem> items)
     {
         _items = items;
-        UiHelper.ApplyFormDefaults(this, $"重命名预览确认 - {actionTitle}", new Size(880, 560));
-        MinimumSize = new Size(680, 400);
+        UiHelper.ApplyFormDefaults(
+            this,
+            $"重命名预览确认 - {actionTitle}",
+            new Size(920, 580),
+            new Size(680, 400));
 
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(12),
+            Padding = UiHelper.SPad(12),
             RowCount = 3,
             ColumnCount = 1
         };
@@ -30,7 +33,7 @@ public class RenamePreviewForm : Form
         {
             AutoSize = true,
             Font = UiHelper.BoldFont,
-            Margin = new Padding(0, 0, 0, 8)
+            Margin = UiHelper.SPad(0, 0, 0, 8)
         };
         root.Controls.Add(_lblSummary, 0, 0);
 
@@ -40,24 +43,26 @@ public class RenamePreviewForm : Form
         var colSelect = new DataGridViewCheckBoxColumn
         {
             HeaderText = "执行",
-            Width = 52
+            Width = UiHelper.S(64),
+            MinimumWidth = UiHelper.S(58),
+            FlatStyle = FlatStyle.Standard
         };
         var colType = new DataGridViewTextBoxColumn
         {
             HeaderText = "类型",
-            Width = 60,
+            Width = UiHelper.S(72),
             ReadOnly = true
         };
         var colOld = new DataGridViewTextBoxColumn
         {
             HeaderText = "原名称",
-            Width = 220,
+            Width = UiHelper.S(230),
             ReadOnly = true
         };
         var colNew = new DataGridViewTextBoxColumn
         {
             HeaderText = "新名称",
-            Width = 220,
+            Width = UiHelper.S(230),
             ReadOnly = true
         };
         var colDir = new DataGridViewTextBoxColumn
@@ -69,7 +74,7 @@ public class RenamePreviewForm : Form
         var colStatus = new DataGridViewTextBoxColumn
         {
             HeaderText = "状态",
-            Width = 120,
+            Width = UiHelper.S(130),
             ReadOnly = true
         };
 
@@ -118,7 +123,7 @@ public class RenamePreviewForm : Form
             ColumnCount = 2,
             RowCount = 1,
             AutoSize = true,
-            Padding = new Padding(0, 8, 0, 0)
+            Padding = UiHelper.SPad(0, 8, 0, 0)
         };
         bottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         bottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
@@ -127,37 +132,30 @@ public class RenamePreviewForm : Form
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
             AutoSize = true
         };
-        var btnSelectAll = new Button { Text = "全选可改项", Width = 100, Height = 30 };
+        Button btnSelectAll = UiHelper.CreateButton("全选可改项", 104, 30);
         btnSelectAll.Click += (_, _) => SetAllSelection(true, targetFolder);
-        var btnUnselectAll = new Button { Text = "全部取消", Width = 90, Height = 30 };
+        Button btnUnselectAll = UiHelper.CreateButton("全部取消", 92, 30);
         btnUnselectAll.Click += (_, _) => SetAllSelection(false, targetFolder);
         leftBtns.Controls.Add(btnSelectAll);
         leftBtns.Controls.Add(btnUnselectAll);
 
         var rightBtns = new FlowLayoutPanel
         {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.RightToLeft,
+            Anchor = AnchorStyles.Right,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
             AutoSize = true
         };
-        var btnCancel = new Button
-        {
-            Text = "取消",
-            Width = 90,
-            Height = 30,
-            DialogResult = DialogResult.Cancel
-        };
-        _btnConfirm = new Button
-        {
-            Text = "确认执行重命名",
-            Width = 130,
-            Height = 30,
-            DialogResult = DialogResult.OK
-        };
-        rightBtns.Controls.Add(btnCancel);
+        _btnConfirm = UiHelper.CreateButton("确认执行重命名", 136, 30, primary: true);
+        _btnConfirm.DialogResult = DialogResult.OK;
+        Button btnCancel = UiHelper.CreateButton("取消", 90, 30);
+        btnCancel.DialogResult = DialogResult.Cancel;
+        btnCancel.Margin = new Padding(0);
         rightBtns.Controls.Add(_btnConfirm);
+        rightBtns.Controls.Add(btnCancel);
 
         bottom.Controls.Add(leftBtns, 0, 0);
         bottom.Controls.Add(rightBtns, 1, 0);

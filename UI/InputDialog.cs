@@ -14,19 +14,25 @@ public class InputDialog : Form
         IReadOnlyList<string>? historyItems,
         bool isPassword)
     {
-        UiHelper.ApplyFormDefaults(this, title, new Size(460, isPassword ? 185 : 165));
+        UiHelper.ApplyFormDefaults(this, title, new Size(480, isPassword ? 200 : 175));
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
+        AutoSize = true;
+        AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        MinimumSize = UiHelper.SSize(440, 150);
         StartPosition = FormStartPosition.CenterParent;
 
         var layout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(14),
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = UiHelper.SPad(14),
             ColumnCount = 1,
             RowCount = isPassword ? 4 : 3
         };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         if (isPassword)
@@ -34,14 +40,14 @@ public class InputDialog : Form
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
 
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         var lblPrompt = new Label
         {
             Text = prompt,
             AutoSize = true,
-            MaximumSize = new Size(425, 0),
-            Margin = new Padding(0, 0, 0, 8)
+            MaximumSize = new Size(UiHelper.S(460), 0),
+            Margin = UiHelper.SPad(0, 0, 0, 8)
         };
         layout.Controls.Add(lblPrompt, 0, 0);
 
@@ -51,6 +57,7 @@ public class InputDialog : Form
             {
                 Dock = DockStyle.Top,
                 DropDownStyle = ComboBoxStyle.DropDown,
+                MinimumSize = UiHelper.SSize(400, 0),
                 Text = defaultValue
             };
             foreach (string item in historyItems)
@@ -65,6 +72,7 @@ public class InputDialog : Form
             var textBox = new TextBox
             {
                 Dock = DockStyle.Top,
+                MinimumSize = UiHelper.SSize(400, 0),
                 Text = defaultValue,
                 UseSystemPasswordChar = isPassword
             };
@@ -80,7 +88,7 @@ public class InputDialog : Form
             {
                 Text = "显示密码",
                 AutoSize = true,
-                Margin = new Padding(0, 6, 0, 0)
+                Margin = UiHelper.SPad(0, 8, 0, 0)
             };
             _showPasswordCheck.CheckedChanged += (_, _) =>
             {
@@ -92,31 +100,24 @@ public class InputDialog : Form
 
         var btnPanel = new FlowLayoutPanel
         {
-            Dock = DockStyle.Bottom,
-            FlowDirection = FlowDirection.RightToLeft,
+            Anchor = AnchorStyles.Right,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
             AutoSize = true,
-            Margin = new Padding(0, 10, 0, 0)
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Margin = UiHelper.SPad(0, 12, 0, 0)
         };
 
-        var btnCancel = new Button
-        {
-            Text = "取消",
-            Width = 85,
-            Height = 28,
-            DialogResult = DialogResult.Cancel
-        };
-
-        var btnOk = new Button
-        {
-            Text = "确定",
-            Width = 85,
-            Height = 28,
-            DialogResult = DialogResult.OK
-        };
+        Button btnOk = UiHelper.CreateButton("确定", 88, 30, primary: true);
+        btnOk.DialogResult = DialogResult.OK;
         btnOk.Click += (_, _) => { ValueText = _inputControl.Text; };
 
-        btnPanel.Controls.Add(btnCancel);
+        Button btnCancel = UiHelper.CreateButton("取消", 88, 30);
+        btnCancel.DialogResult = DialogResult.Cancel;
+        btnCancel.Margin = new Padding(0);
+
         btnPanel.Controls.Add(btnOk);
+        btnPanel.Controls.Add(btnCancel);
         layout.Controls.Add(btnPanel, 0, btnRow);
 
         Controls.Add(layout);

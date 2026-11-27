@@ -1,6 +1,4 @@
-using System.Text.Encodings.Web;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Text;
 using Zquick.Models;
 
 namespace Zquick.Services;
@@ -8,13 +6,6 @@ namespace Zquick.Services;
 public class ConfigService
 {
     private const int MaxRecentPrefixes = 15;
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        Converters = { new JsonStringEnumConverter() }
-    };
 
     public string DataDirectory { get; }
     public string ConfigFilePath { get; }
@@ -27,7 +18,7 @@ public class ConfigService
 
     private static string ResolveWritableDataDirectory()
     {
-        string baseDir = AppContext.BaseDirectory;
+        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
         if (CanWriteToDirectory(baseDir))
         {
             return baseDir;
@@ -71,8 +62,8 @@ public class ConfigService
 
         try
         {
-            string json = File.ReadAllText(ConfigFilePath);
-            AppConfig? loaded = JsonSerializer.Deserialize<AppConfig>(json, JsonOptions);
+            string json = File.ReadAllText(ConfigFilePath, Encoding.UTF8);
+            AppConfig? loaded = JsonHelper.Deserialize<AppConfig>(json);
             if (loaded == null)
             {
                 return DefaultConfigFactory.CreateDefault();
@@ -96,10 +87,15 @@ public class ConfigService
     public void Save(AppConfig config)
     {
         Directory.CreateDirectory(DataDirectory);
-        string json = JsonSerializer.Serialize(config, JsonOptions);
+        string json = JsonHelper.Serialize(config);
         string tempPath = ConfigFilePath + ".tmp";
-        File.WriteAllText(tempPath, json);
-        File.Move(tempPath, ConfigFilePath, overwrite: true);
+        File.WriteAllText(tempPath, json, Encoding.UTF8);
+        if (File.Exists(ConfigFilePath))
+        {
+            File.Delete(ConfigFilePath);
+        }
+
+        File.Move(tempPath, ConfigFilePath);
     }
 
     public void RecordRecentPrefix(AppConfig config, string prefix)

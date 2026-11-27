@@ -62,8 +62,17 @@ public class ActionEditForm : Form
 
     public MenuAction ResultAction => _workingAction;
 
-    private sealed record ComboItem<T>(string Label, T Value)
+    private sealed class ComboItem<T>
     {
+        public string Label { get; }
+        public T Value { get; }
+
+        public ComboItem(string label, T value)
+        {
+            Label = label;
+            Value = value;
+        }
+
         public override string ToString() => Label;
     }
 
@@ -73,7 +82,7 @@ public class ActionEditForm : Form
         _isNew = sourceAction == null;
         _workingAction = sourceAction?.Clone() ?? new MenuAction
         {
-            Id = "custom-" + Guid.NewGuid().ToString("N")[..6],
+            Id = "custom-" + Guid.NewGuid().ToString("N").Substring(0, 6),
             Title = "新菜单动作",
             Enabled = true,
             Kind = ActionKind.RenameFilesByFolder,
@@ -83,8 +92,8 @@ public class ActionEditForm : Form
         UiHelper.ApplyFormDefaults(
             this,
             _isNew ? "新增右键动作" : $"编辑右键动作 - {_workingAction.Title}",
-            new Size(640, 620));
-        MinimumSize = new Size(560, 520);
+            new Size(680, 650),
+            new Size(560, 520));
         FormBorderStyle = FormBorderStyle.Sizable;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -92,7 +101,7 @@ public class ActionEditForm : Form
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(14),
+            Padding = UiHelper.SPad(14),
             ColumnCount = 1,
             RowCount = 3
         };
@@ -106,7 +115,7 @@ public class ActionEditForm : Form
             Text = "基本菜单信息",
             Dock = DockStyle.Top,
             AutoSize = true,
-            Padding = new Padding(10)
+            Padding = UiHelper.SPad(10)
         };
 
         var commonGrid = new TableLayoutPanel
@@ -115,7 +124,7 @@ public class ActionEditForm : Form
             ColumnCount = 2,
             AutoSize = true
         };
-        commonGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 115));
+        commonGrid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         commonGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         _txtTitle = new TextBox { Dock = DockStyle.Fill, Text = _workingAction.Title };
@@ -131,7 +140,7 @@ public class ActionEditForm : Form
             Dock = DockStyle.Fill,
             DropDownStyle = ComboBoxStyle.DropDownList
         };
-        foreach (ActionKind kind in Enum.GetValues<ActionKind>())
+        foreach (ActionKind kind in (ActionKind[])Enum.GetValues(typeof(ActionKind)))
         {
             _cmbKind.Items.Add(new ComboItem<ActionKind>(MenuAction.GetKindDisplayName(kind), kind));
         }
@@ -141,19 +150,22 @@ public class ActionEditForm : Form
         {
             Text = "启用（同步到右键菜单）",
             AutoSize = true,
-            Checked = _workingAction.Enabled
+            Checked = _workingAction.Enabled,
+            Margin = UiHelper.SPad(0, 0, 12, 4)
         };
         _chkSeparator = new CheckBox
         {
             Text = "在此菜单项上方显示分割线",
             AutoSize = true,
-            Checked = _workingAction.SeparatorBefore
+            Checked = _workingAction.SeparatorBefore,
+            Margin = UiHelper.SPad(0, 0, 12, 4)
         };
         _chkConfirmBeforeRun = new CheckBox
         {
             Text = "重命名前弹窗预览并确认",
             AutoSize = true,
-            Checked = _workingAction.ConfirmBeforeRun
+            Checked = _workingAction.ConfirmBeforeRun,
+            Margin = UiHelper.SPad(0, 0, 0, 4)
         };
 
         AddLabeledRow(commonGrid, 0, "菜单显示名称：", _txtTitle);
@@ -165,10 +177,16 @@ public class ActionEditForm : Form
             Dock = DockStyle.Fill,
             AutoSize = true,
             WrapContents = true,
-            Margin = new Padding(0, 4, 0, 0)
+            Margin = UiHelper.SPad(0, 4, 0, 0)
         };
         flagsPanel.Controls.AddRange(new Control[] { _chkEnabled, _chkSeparator, _chkConfirmBeforeRun });
-        commonGrid.Controls.Add(new Label { Text = "菜单选项：", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 3);
+        commonGrid.Controls.Add(new Label
+        {
+            Text = "菜单选项：",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = UiHelper.SPad(0, 6, 8, 6)
+        }, 0, 3);
         commonGrid.Controls.Add(flagsPanel, 1, 3);
 
         commonGroup.Controls.Add(commonGrid);
@@ -179,7 +197,7 @@ public class ActionEditForm : Form
         {
             Text = "动作专属参数",
             Dock = DockStyle.Fill,
-            Padding = new Padding(10)
+            Padding = UiHelper.SPad(10)
         };
         _dynamicPanel = new Panel
         {
@@ -192,17 +210,21 @@ public class ActionEditForm : Form
         // 底部按钮
         var btnBar = new FlowLayoutPanel
         {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.RightToLeft,
+            Anchor = AnchorStyles.Right,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
             AutoSize = true,
-            Padding = new Padding(0, 8, 0, 0)
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = UiHelper.SPad(0, 8, 0, 0)
         };
-        var btnCancel = new Button { Text = "取消", Width = 90, Height = 30, DialogResult = DialogResult.Cancel };
-        var btnSave = new Button { Text = "确定保存", Width = 100, Height = 30 };
+        Button btnSave = UiHelper.CreateButton("确定保存", 104, 30, primary: true);
         btnSave.Click += OnSaveClick;
+        Button btnCancel = UiHelper.CreateButton("取消", 90, 30);
+        btnCancel.DialogResult = DialogResult.Cancel;
+        btnCancel.Margin = new Padding(0);
 
-        btnBar.Controls.Add(btnCancel);
         btnBar.Controls.Add(btnSave);
+        btnBar.Controls.Add(btnCancel);
         root.Controls.Add(btnBar, 0, 2);
 
         Controls.Add(root);
@@ -247,8 +269,8 @@ public class ActionEditForm : Form
         {
             Text = "统计当前文件夹内的直接子文件夹数量、文件数量与总大小，并在弹窗中生成完整目录树，支持一键复制到剪贴板。",
             AutoSize = true,
-            MaximumSize = new Size(560, 0),
-            Padding = new Padding(4)
+            MaximumSize = new Size(UiHelper.S(580), 0),
+            Padding = UiHelper.SPad(4)
         };
     }
 
@@ -303,15 +325,15 @@ public class ActionEditForm : Form
         };
         _txtNumberSep = new TextBox
         {
-            Width = 100,
+            Width = UiHelper.S(110),
             Text = _workingAction.NumberSeparator
         };
         _numPadDigits = new NumericUpDown
         {
-            Width = 100,
+            Width = UiHelper.S(110),
             Minimum = 1,
             Maximum = 6,
-            Value = Math.Clamp(_workingAction.PadDigits, 1, 6)
+            Value = Math.Max(1, Math.Min(6, _workingAction.PadDigits))
         };
         _chkSkipHiddenRename = new CheckBox
         {
@@ -337,13 +359,13 @@ public class ActionEditForm : Form
         {
             Text = "要移除的前缀列表（每行一个，匹配时不区分大小写）：",
             AutoSize = true,
-            Margin = new Padding(0, 0, 0, 4)
+            Margin = UiHelper.SPad(0, 0, 0, 4)
         };
         _txtRemovePrefixes = new TextBox
         {
             Multiline = true,
             ScrollBars = ScrollBars.Vertical,
-            Height = 110,
+            Height = UiHelper.S(120),
             Dock = DockStyle.Fill,
             Text = string.Join(Environment.NewLine, _workingAction.RemovePrefixes)
         };
@@ -371,7 +393,7 @@ public class ActionEditForm : Form
     {
         var panel = CreateTwoColumnGrid();
 
-        _cmbArchiveFormat = new ComboBox { Width = 120, DropDownStyle = ComboBoxStyle.DropDownList };
+        _cmbArchiveFormat = new ComboBox { Width = UiHelper.S(130), DropDownStyle = ComboBoxStyle.DropDownList };
         _cmbArchiveFormat.Items.AddRange(new object[] { "zip", "7z" });
         _cmbArchiveFormat.SelectedItem = string.Equals(_workingAction.ArchiveFormat, "7z", StringComparison.OrdinalIgnoreCase)
             ? "7z"
@@ -429,6 +451,8 @@ public class ActionEditForm : Form
         {
             Text = "显示密码",
             AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = UiHelper.SPad(6, 2, 0, 2),
             Enabled = _workingAction.UsePassword
         };
         _chkShowPwd.CheckedChanged += (_, _) => _txtPassword.UseSystemPasswordChar = !_chkShowPwd.Checked;
@@ -474,7 +498,7 @@ public class ActionEditForm : Form
     {
         var panel = CreateTwoColumnGrid();
 
-        _cmbAngle = new ComboBox { Width = 140, DropDownStyle = ComboBoxStyle.DropDownList };
+        _cmbAngle = new ComboBox { Width = UiHelper.S(150), DropDownStyle = ComboBoxStyle.DropDownList };
         _cmbAngle.Items.Add(new ComboItem<int>("顺时针 90°", 90));
         _cmbAngle.Items.Add(new ComboItem<int>("旋转 180°", 180));
         _cmbAngle.Items.Add(new ComboItem<int>("顺时针 270°", 270));
@@ -508,7 +532,8 @@ public class ActionEditForm : Form
         var panel = CreateTwoColumnGrid();
 
         _txtScriptPath = new TextBox { Dock = DockStyle.Fill, Text = _workingAction.ScriptPath };
-        var btnBrowse = new Button { Text = "浏览...", Width = 80, Height = 26 };
+        Button btnBrowse = UiHelper.CreateButton("浏览...", 84, 28);
+        btnBrowse.Margin = UiHelper.SPad(6, 0, 0, 0);
         btnBrowse.Click += (_, _) =>
         {
             using var ofd = new OpenFileDialog
@@ -534,7 +559,7 @@ public class ActionEditForm : Form
             Text = "提示：参数中可使用 {dir} 占位符表示当前右键目录；脚本默认以该目录作为工作目录启动。",
             AutoSize = true,
             ForeColor = Color.DimGray,
-            MaximumSize = new Size(560, 0)
+            MaximumSize = new Size(UiHelper.S(580), 0)
         };
         _chkShowConsole = new CheckBox
         {
@@ -556,11 +581,11 @@ public class ActionEditForm : Form
         {
             ColumnCount = 2,
             RowCount = 2,
-            Height = 250,
+            Height = UiHelper.S(260),
             Dock = DockStyle.Top
         };
         container.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        container.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
+        container.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         container.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         container.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
@@ -568,7 +593,7 @@ public class ActionEditForm : Form
         {
             Text = "勾选并按顺序排列要串联执行的动作（自上而下依次执行）：",
             AutoSize = true,
-            Margin = new Padding(0, 0, 0, 6)
+            Margin = UiHelper.SPad(0, 0, 0, 6)
         };
         container.Controls.Add(lblTip, 0, 0);
         container.SetColumnSpan(lblTip, 2);
@@ -576,7 +601,8 @@ public class ActionEditForm : Form
         _clbPipelineSteps = new CheckedListBox
         {
             Dock = DockStyle.Fill,
-            CheckOnClick = true
+            CheckOnClick = true,
+            IntegralHeight = false
         };
 
         var available = _config.Actions
@@ -613,10 +639,12 @@ public class ActionEditForm : Form
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,
-            Padding = new Padding(6, 0, 0, 0)
+            WrapContents = false,
+            AutoSize = true,
+            Padding = UiHelper.SPad(8, 0, 0, 0)
         };
-        var btnUp = new Button { Text = "上移", Width = 80, Height = 28 };
-        var btnDown = new Button { Text = "下移", Width = 80, Height = 28 };
+        Button btnUp = UiHelper.CreateButton("上移", 84, 30);
+        Button btnDown = UiHelper.CreateButton("下移", 84, 30);
         btnUp.Click += (_, _) => MoveCheckedListItem(-1);
         btnDown.Click += (_, _) => MoveCheckedListItem(1);
         sidePanel.Controls.Add(btnUp);
@@ -786,7 +814,7 @@ public class ActionEditForm : Form
             ColumnCount = 2,
             AutoSize = true
         };
-        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 145));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         return panel;
     }
@@ -803,9 +831,9 @@ public class ActionEditForm : Form
             Text = labelText,
             AutoSize = true,
             Anchor = AnchorStyles.Left,
-            Margin = new Padding(0, 6, 6, 6)
+            Margin = UiHelper.SPad(0, 6, 8, 6)
         };
-        control.Margin = new Padding(0, 4, 0, 4);
+        control.Margin = UiHelper.SPad(0, 4, 0, 4);
         panel.Controls.Add(lbl, 0, row);
         panel.Controls.Add(control, 1, row);
     }
@@ -817,7 +845,7 @@ public class ActionEditForm : Form
             panel.RowCount++;
         }
 
-        control.Margin = new Padding(0, 5, 0, 5);
+        control.Margin = UiHelper.SPad(0, 5, 0, 5);
         panel.Controls.Add(control, 0, row);
         panel.SetColumnSpan(control, 2);
     }

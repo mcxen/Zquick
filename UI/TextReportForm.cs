@@ -4,13 +4,12 @@ public class TextReportForm : Form
 {
     public TextReportForm(string title, string headerSummary, string contentText)
     {
-        UiHelper.ApplyFormDefaults(this, title, new Size(760, 560));
-        MinimumSize = new Size(520, 380);
+        UiHelper.ApplyFormDefaults(this, title, new Size(780, 580), new Size(520, 380));
 
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(12),
+            Padding = UiHelper.SPad(12),
             RowCount = 3,
             ColumnCount = 1
         };
@@ -23,7 +22,7 @@ public class TextReportForm : Form
             Text = headerSummary,
             Font = UiHelper.BoldFont,
             AutoSize = true,
-            Margin = new Padding(0, 0, 0, 8)
+            Margin = UiHelper.SPad(0, 0, 0, 8)
         };
         root.Controls.Add(lblHeader, 0, 0);
 
@@ -42,26 +41,15 @@ public class TextReportForm : Form
 
         var footer = new FlowLayoutPanel
         {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.RightToLeft,
+            Anchor = AnchorStyles.Right,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
             AutoSize = true,
-            Padding = new Padding(0, 8, 0, 0)
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = UiHelper.SPad(0, 8, 0, 0)
         };
 
-        var btnClose = new Button
-        {
-            Text = "关闭",
-            Width = 90,
-            Height = 30,
-            DialogResult = DialogResult.OK
-        };
-
-        var btnCopy = new Button
-        {
-            Text = "复制全部",
-            Width = 100,
-            Height = 30
-        };
+        Button btnCopy = UiHelper.CreateButton("复制全部", 100, 30);
         btnCopy.Click += (_, _) =>
         {
             if (!string.IsNullOrEmpty(textBox.Text))
@@ -71,8 +59,12 @@ public class TextReportForm : Form
             }
         };
 
-        footer.Controls.Add(btnClose);
+        Button btnClose = UiHelper.CreateButton("关闭", 90, 30);
+        btnClose.DialogResult = DialogResult.OK;
+        btnClose.Margin = new Padding(0);
+
         footer.Controls.Add(btnCopy);
+        footer.Controls.Add(btnClose);
         root.Controls.Add(footer, 0, 2);
 
         Controls.Add(root);

@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "要发布的版本号标签（例如 v1.0.0）"
+        description: "要发布的版本号标签（例如 v1.0.1）"
         required: true
         type: string
 
@@ -44,29 +44,19 @@ jobs:
           "assembly_ver=$assemblyVer" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           Write-Host "Tag: $tag | Version: $version | AssemblyVersion: $assemblyVer"
 
-      - name: Publish Standalone Single-File (win-x64)
+      - name: Build Zquick (net48 Release)
+        shell: pwsh
         run: |
-          dotnet publish Zquick.csproj -c Release -r win-x64 --self-contained true `
-            -p:PublishSingleFile=true `
-            -p:IncludeNativeLibrariesForSelfExtract=true `
-            -p:EnableCompressionInSingleFile=true `
+          dotnet build Zquick.csproj -c Release `
             -p:Version=${{ steps.ver.outputs.version }} `
             -p:InformationalVersion=${{ steps.ver.outputs.version }} `
             -p:AssemblyVersion=${{ steps.ver.outputs.assembly_ver }} `
             -p:FileVersion=${{ steps.ver.outputs.assembly_ver }} `
-            -o publish/standalone
-        shell: pwsh
-
-      - name: Publish Light Single-File (win-x64)
-        run: |
-          dotnet publish Zquick.csproj -c Release -r win-x64 --self-contained false `
-            -p:PublishSingleFile=true `
-            -p:Version=${{ steps.ver.outputs.version }} `
-            -p:InformationalVersion=${{ steps.ver.outputs.version }} `
-            -p:AssemblyVersion=${{ steps.ver.outputs.assembly_ver }} `
-            -p:FileVersion=${{ steps.ver.outputs.assembly_ver }} `
-            -o publish/light
-        shell: pwsh
+            -o publish
+          if (-not (Test-Path "publish\Zquick.exe")) {
+            throw "publish\Zquick.exe not found!"
+          }
+          Get-Item "publish\Zquick.exe" | Select-Object Name, Length
 
       - name: Build Windows Installer (Inno Setup 6)
         shell: pwsh
@@ -95,17 +85,14 @@ jobs:
             throw "ISCC.exe failed with exit code $LASTEXITCODE"
           }
 
-      - name: Package Portable Archives & Checksums
+      - name: Package Portable Archive & Checksums
         shell: pwsh
         run: |
           $ver = "${{ steps.ver.outputs.version }}"
           New-Item -ItemType Directory -Force -Path dist | Out-Null
 
           $portableZip = "dist\Zquick-Portable-v$ver-win-x64.zip"
-          $lightZip = "dist\Zquick-Light-v$ver-win-x64.zip"
-
-          Compress-Archive -Path "publish\standalone\Zquick.exe", "README.md", "LICENSE" -DestinationPath $portableZip -Force
-          Compress-Archive -Path "publish\light\Zquick.exe", "README.md", "LICENSE" -DestinationPath $lightZip -Force
+          Compress-Archive -Path "publish\Zquick.exe", "README.md", "LICENSE" -DestinationPath $portableZip -Force
 
           $files = Get-ChildItem -Path "dist" -File | Where-Object { $_.Name -ne "SHA256SUMS.txt" } | Sort-Object Name
           $sums = foreach ($f in $files) {
@@ -126,11 +113,12 @@ jobs:
           $notes = @"
           ## Zquick v$ver 发布说明
 
+          基于系统原生 **.NET Framework 4.8** 构建（Windows 10/11 开箱即用、零运行库依赖），并支持 **Per-Monitor V2 高分辨率/高 DPI 自适应** 与现代 Windows 视觉样式。
+
           ### 下载文件说明
-          - **\`Zquick-Setup-v$ver-win-x64.exe\`**（推荐）：Windows 安装包，内置独立运行时，支持安装向导自动注册 Explorer 右键菜单及控制面板干净卸载。
-          - **\`Zquick-Portable-v$ver-win-x64.zip\`**：免安装单文件便携版（无需预先安装 .NET 8 Runtime），解压即用。
-          - **\`Zquick-Light-v$ver-win-x64.zip\`**：轻量单文件版（体积较小，需系统已安装 [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)）。
-          - **\`SHA256SUMS.txt\`**：所有发布文件的 SHA-256 校验值。
+          - **\`Zquick-Setup-v$ver-win-x64.exe\`**（推荐，约 1 MB）：Windows 安装包，支持向导勾选自动注册 Explorer 右键菜单及控制面板干净卸载。
+          - **\`Zquick-Portable-v$ver-win-x64.zip\`**（约 100 KB）：绿色单文件便携版，解压 \`Zquick.exe\` 直接运行。
+          - **\`SHA256SUMS.txt\`**：发布文件 SHA-256 校验值。
 
           ### 快速上手
           1. 运行安装程序（或解压便携版运行 \`Zquick.exe\`）。

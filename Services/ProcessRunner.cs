@@ -52,7 +52,7 @@ public static class ProcessRunner
             return null;
         }
 
-        foreach (string dir in pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        foreach (string dir in pathEnv.Split(new[] { Path.PathSeparator }, StringSplitOptions.RemoveEmptyEntries))
         {
             try
             {
@@ -106,6 +106,25 @@ public static class ProcessRunner
         }
 
         using var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
+        var tcs = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        process.Exited += (_, _) =>
+        {
+            try
+            {
+                if (!showWindow)
+                {
+                    // 确保异步 stdout/stderr 缓冲区在回调完成前刷新完毕
+                    process.WaitForExit();
+                }
+
+                tcs.TrySetResult(process.ExitCode);
+            }
+            catch (Exception ex)
+            {
+                tcs.TrySetException(ex);
+            }
+        };
 
         if (!showWindow)
         {
@@ -136,22 +155,54 @@ public static class ProcessRunner
             process.BeginErrorReadLine();
         }
 
+        if (process.HasExited)
+        {
+            if (!showWindow)
+            {
+                process.WaitForExit();
+            }
+
+            return process.ExitCode;
+        }
+
         using CancellationTokenRegistration reg = cancellationToken.Register(() =>
         {
-            try
-            {
-                if (!process.HasExited)
-                {
-                    process.Kill(entireProcessTree: true);
-                }
-            }
-            catch
-            {
-                // 忽略进程已退出时的异常
-            }
+            KillProcessTreeSafe(process);
+            tcs.TrySetCanceled(cancellationToken);
         });
 
-        await process.WaitForExitAsync(cancellationToken);
-        return process.ExitCode;
+        return await tcs.Task.ConfigureAwait(false);
+    }
+
+    private static void KillProcessTreeSafe(Process process)
+    {
+        try
+        {
+            if (process.HasExited)
+            {
+                return;
+            }
+
+            int pid = process.Id;
+            using (var killer = Process.Start(new ProcessStartInfo
+            {
+                FileName = "taskkill",
+                Arguments = $"/PID {pid} /T /F",
+                CreateNoWindow = true,
+                UseShellExecute = false
+            }))
+            {
+                killer?.WaitForExit(3000);
+            }
+
+            if (!process.HasExited)
+            {
+                process.Kill();
+            }
+        }
+        catch
+        {
+            // 忽略进程已退出的异常
+        }
     }
 }

@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Zquick.Models;
 using Zquick.Services;
 using Zquick.UI;
@@ -8,10 +8,28 @@ namespace Zquick;
 
 internal static class Program
 {
+    [DllImport("user32.dll")]
+    private static extern bool SetProcessDpiAwarenessContext(IntPtr dpiContext);
+
+    private static void TryEnablePerMonitorV2Dpi()
+    {
+        try
+        {
+            // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = -4
+            SetProcessDpiAwarenessContext(new IntPtr(-4));
+        }
+        catch
+        {
+            // 降级由 app.manifest 的 dpiAware / dpiAwareness 处理
+        }
+    }
+
     [STAThread]
     private static void Main(string[] args)
     {
-        ApplicationConfiguration.Initialize();
+        TryEnablePerMonitorV2Dpi();
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
 
         Application.ThreadException += (_, e) =>
             MessageBox.Show($"发生未处理界面异常：\n{e.Exception.Message}", "Zquick 错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -73,9 +91,7 @@ internal static class Program
 
     public static string GetCurrentExePath()
     {
-        return Environment.ProcessPath
-            ?? Process.GetCurrentProcess().MainModule?.FileName
-            ?? Path.Combine(AppContext.BaseDirectory, "Zquick.exe");
+        return Application.ExecutablePath;
     }
 
     public static string GetDisplayVersion()
@@ -86,10 +102,10 @@ internal static class Program
         if (!string.IsNullOrWhiteSpace(raw))
         {
             int plusIdx = raw.IndexOf('+');
-            return plusIdx > 0 ? raw[..plusIdx] : raw;
+            return plusIdx > 0 ? raw.Substring(0, plusIdx) : raw;
         }
 
         Version? ver = Assembly.GetExecutingAssembly().GetName().Version;
-        return ver != null ? $"{ver.Major}.{ver.Minor}.{ver.Build}" : "1.0.0";
+        return ver != null ? $"{ver.Major}.{ver.Minor}.{ver.Build}" : "1.0.1";
     }
 }

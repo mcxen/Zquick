@@ -6,22 +6,27 @@ namespace Zquick.Services;
 
 public class FolderOverviewResult
 {
-    public int DirectFolderCount { get; init; }
-    public int DirectFileCount { get; init; }
-    public long DirectFilesTotalBytes { get; init; }
-    public string ReportText { get; init; } = "";
+    public int DirectFolderCount { get; set; }
+    public int DirectFileCount { get; set; }
+    public long DirectFilesTotalBytes { get; set; }
+    public string ReportText { get; set; } = "";
 }
 
 public static class ActionExecutor
 {
     private const int MaxTreeLines = 2000;
 
+    private static int ClampInt(int value, int min, int max)
+    {
+        return Math.Max(min, Math.Min(max, value));
+    }
+
     public static FolderOverviewResult BuildFolderOverview(string folderPath)
     {
         var dirInfo = new DirectoryInfo(folderPath);
         DirectoryInfo[] directDirs = SafeGetDirectories(dirInfo, skipHiddenSystem: false);
         FileInfo[] directFiles = SafeGetFiles(dirInfo, skipHiddenSystem: false);
-        long totalBytes = directFiles.Sum(f => SafeFileLength(f));
+        long totalBytes = directFiles.Sum(SafeFileLength);
 
         var sb = new StringBuilder();
         sb.AppendLine($"目标路径：{dirInfo.FullName}");
@@ -215,7 +220,7 @@ public static class ActionExecutor
         }
 
         string sep = action.NumberSeparator ?? "_";
-        int minPad = Math.Clamp(action.PadDigits, 1, 6);
+        int minPad = ClampInt(action.PadDigits, 1, 6);
 
         foreach (DirectoryInfo targetDir in targetDirs)
         {
@@ -353,21 +358,11 @@ public static class ActionExecutor
             return plan;
         }
 
-        var enumOptions = new EnumerationOptions
-        {
-            IgnoreInaccessible = true,
-            RecurseSubdirectories = action.Recursive,
-            AttributesToSkip = action.SkipHiddenAndSystem
-                ? FileAttributes.Hidden | FileAttributes.System
-                : FileAttributes.None
-        };
-
         var rootDir = new DirectoryInfo(folderPath);
-        FileSystemInfo[] entries = rootDir.GetFileSystemInfos("*", enumOptions)
+        List<FileSystemInfo> entries = WalkEntriesSafe(rootDir, action.Recursive, action.SkipHiddenAndSystem)
             .OrderByDescending(e => e.FullName.Length)
-            .ToArray();
+            .ToList();
 
-        // 记录同一个父路径下已经被计划占用的新路径，避免多个同级前缀同时去掉后重名
         var plannedTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (FileSystemInfo entry in entries)
@@ -380,7 +375,7 @@ public static class ActionExecutor
                 continue;
             }
 
-            string newName = entry.Name[matchedPrefix.Length..];
+            string newName = entry.Name.Substring(matchedPrefix.Length);
             bool isDir = entry is DirectoryInfo;
             string parentDir = Path.GetDirectoryName(entry.FullName) ?? folderPath;
             string targetPath = Path.Combine(parentDir, newName);
@@ -425,6 +420,34 @@ public static class ActionExecutor
         }
 
         return plan;
+    }
+
+    private static List<FileSystemInfo> WalkEntriesSafe(DirectoryInfo root, bool recursive, bool skipHiddenSystem)
+    {
+        var results = new List<FileSystemInfo>();
+        var stack = new Stack<DirectoryInfo>();
+        stack.Push(root);
+
+        while (stack.Count > 0)
+        {
+            DirectoryInfo current = stack.Pop();
+
+            foreach (FileInfo file in SafeGetFiles(current, skipHiddenSystem))
+            {
+                results.Add(file);
+            }
+
+            foreach (DirectoryInfo sub in SafeGetDirectories(current, skipHiddenSystem))
+            {
+                results.Add(sub);
+                if (recursive)
+                {
+                    stack.Push(sub);
+                }
+            }
+        }
+
+        return results;
     }
 
     public static RenameBatch? ExecuteRenamePlan(
@@ -570,7 +593,7 @@ public static class ActionExecutor
         {
             if (!string.IsNullOrEmpty(runtimePassword))
             {
-                password = runtimePassword;
+                password = runtimePassword!;
             }
             else if (!string.IsNullOrEmpty(action.EncryptedPassword))
             {
@@ -688,7 +711,7 @@ public static class ActionExecutor
         string? ffmpeg = ProcessRunner.ResolveToolPath(
             config.FfmpegPath,
             "ffmpeg.exe",
-            Path.Combine(AppContext.BaseDirectory, "ffmpeg.exe"),
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe"),
             @"C:\ffmpeg\bin\ffmpeg.exe");
 
         if (ffmpeg == null)
@@ -697,10 +720,11 @@ public static class ActionExecutor
                 "未找到 ffmpeg.exe，请在【全局设置】中配置 FFmpeg 路径或将其加入系统 PATH。");
         }
 
-        HashSet<string> extSet = (action.VideoExtensions ?? ".mp4")
-            .Split(new[] { ';', ',', ' ', '|' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(e => e.StartsWith('.') ? e.ToLowerInvariant() : "." + e.ToLowerInvariant())
-            .ToHashSet();
+        var extSet = new HashSet<string>(
+            (action.VideoExtensions ?? ".mp4")
+                .Split(new[] { ';', ',', ' ', '|' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(e => e.StartsWith(".") ? e.ToLowerInvariant() : "." + e.ToLowerInvariant()),
+            StringComparer.OrdinalIgnoreCase);
 
         if (extSet.Count == 0)
         {
@@ -758,9 +782,9 @@ public static class ActionExecutor
                 line =>
                 {
                     if (!string.IsNullOrWhiteSpace(line) &&
-                        (line.Contains("error", StringComparison.OrdinalIgnoreCase) ||
-                         line.Contains("invalid", StringComparison.OrdinalIgnoreCase) ||
-                         line.Contains("Output #0", StringComparison.OrdinalIgnoreCase)))
+                        (line.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         line.IndexOf("invalid", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                         line.IndexOf("Output #0", StringComparison.OrdinalIgnoreCase) >= 0))
                     {
                         log("    " + line);
                     }

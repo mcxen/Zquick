@@ -1,17 +1,17 @@
 using System.Text.RegularExpressions;
-using Zquick.Models;
 using Microsoft.Win32;
+using Zquick.Models;
 
 namespace Zquick.Services;
 
 public class ContextMenuStatus
 {
-    public bool IsRegistered { get; init; }
-    public bool OnFolder { get; init; }
-    public bool OnBackground { get; init; }
-    public string RegisteredExePath { get; init; } = "";
-    public bool PathMatchesCurrent { get; init; }
-    public int RegisteredItemCount { get; init; }
+    public bool IsRegistered { get; set; }
+    public bool OnFolder { get; set; }
+    public bool OnBackground { get; set; }
+    public string RegisteredExePath { get; set; } = "";
+    public bool PathMatchesCurrent { get; set; }
+    public int RegisteredItemCount { get; set; }
 }
 
 public static class ContextMenuService
@@ -119,7 +119,7 @@ public static class ContextMenuService
                 string? rawCmd = settingsCmd?.GetValue("") as string;
                 if (!string.IsNullOrWhiteSpace(rawCmd))
                 {
-                    registeredExe = ExtractExePath(rawCmd);
+                    registeredExe = ExtractExePath(rawCmd!);
                 }
             }
         }
@@ -150,17 +150,17 @@ public static class ContextMenuService
     private static string ExtractExePath(string commandValue)
     {
         string trimmed = commandValue.Trim();
-        if (trimmed.StartsWith('"'))
+        if (trimmed.StartsWith("\""))
         {
             int endQuote = trimmed.IndexOf('"', 1);
             if (endQuote > 1)
             {
-                return trimmed[1..endQuote];
+                return trimmed.Substring(1, endQuote - 1);
             }
         }
 
         int firstSpace = trimmed.IndexOf(' ');
-        return firstSpace > 0 ? trimmed[..firstSpace] : trimmed;
+        return firstSpace > 0 ? trimmed.Substring(0, firstSpace) : trimmed;
     }
 
     private static string SanitizeKeyName(string raw)

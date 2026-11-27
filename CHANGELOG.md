@@ -5,19 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-11-27
+
+### Changed
+- 目标框架切换至 Windows 原生内置的 **.NET Framework 4.8 (`net48`)**，去除庞大的 .NET 8 独立运行库打包，单文件可执行程序缩减至 ~150 KB，安装包瘦身至 **~1 MB**，Windows 10/11 零依赖开箱即用。
+- 重写 JSON 配置与历史记录序列化层为系统内置 `JavaScriptSerializer`，保持零外部 NuGet 依赖。
+
+### Fixed
+- 嵌入 `app.manifest` 启用现代 Windows Common Controls v6 视觉样式，并在程序入口调用 `SetProcessDpiAwarenessContext(PerMonitorV2)`，彻底修复高分辨率/高 DPI（150%–250% 缩放）下界面文字裁切、顶栏按钮遮挡及表格行高与复选框挤压问题。
+- 所有窗体按钮与表格列头/行高改为按系统 DPI 缩放并启用 `AutoSize`，保证各缩放比例下清晰完整显示。
+
 ## [1.0.0] - 2026-11-27
 
 ### Added
-- 首个正式版本发布（**Zquick**，基于 .NET 8 WinForms 构建，零外部 NuGet 依赖）。
-- 支持无管理员权限写入 `HKCU` 注册表，在 Windows 资源管理器文件夹及空白处右键提供二级级联菜单。
-- 内置 8 类可扩展动作：
-  - 目录结构概览与目录树导出复制
-  - 子文件夹批量加前缀（支持历史前缀记忆）
-  - 按当前文件夹名 / 各自子文件夹名重命名子文件（按扩展名分组、补零、单文件可免编号、幂等跳过）
-  - 递归清理指定前缀列表
-  - 批量 7z / ZIP 压缩（支持外层目录保留/平铺、AES-256 加密 + DPAPI 加密存密、校验退出码后安全移入回收站）
-  - FFmpeg 批量无损旋转视频（90° / 180° / 270°，自动创建输出目录，支持 Metadata 与 DisplayRotation 模式）
-  - 外挂自定义 `.bat` / `.ps1` / `.exe` 脚本
-  - 组合流水线（自由串联多个动作按序执行，任意步取消即安全中止）
+- 首个正式版本发布（**Zquick**），支持无管理员权限注册 Explorer 二级级联右键菜单。
+- 内置 8 类可扩展动作：目录结构概览、文件夹加前缀、按文件夹名重命名子文件、递归清理前缀、7z/ZIP 批量压缩（含加密及安全移入回收站）、FFmpeg 无损视频旋转、自定义脚本以及组合流水线。
 - 提供重命名变更预览确认窗口与本地历史记录（`history.json`）一键逆序撤销功能。
-- 提供 Inno Setup Windows 安装包（支持安装时自动注册右键菜单、卸载时自动清理注册表）、独立单文件便携版及 GitHub Actions 自动构建发布流程。
+- 提供 Inno Setup Windows 安装包、便携版及 GitHub Actions 自动构建发布流程。

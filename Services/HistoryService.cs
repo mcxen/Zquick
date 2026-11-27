@@ -1,5 +1,4 @@
-using System.Text.Encodings.Web;
-using System.Text.Json;
+using System.Text;
 using Zquick.Models;
 
 namespace Zquick.Services;
@@ -7,12 +6,6 @@ namespace Zquick.Services;
 public class HistoryService
 {
     private const int MaxBatches = 50;
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-    };
 
     public string HistoryFilePath { get; }
 
@@ -30,8 +23,8 @@ public class HistoryService
 
         try
         {
-            string json = File.ReadAllText(HistoryFilePath);
-            return JsonSerializer.Deserialize<List<RenameBatch>>(json, JsonOptions) ?? new List<RenameBatch>();
+            string json = File.ReadAllText(HistoryFilePath, Encoding.UTF8);
+            return JsonHelper.Deserialize<List<RenameBatch>>(json) ?? new List<RenameBatch>();
         }
         catch
         {
@@ -47,10 +40,15 @@ public class HistoryService
             Directory.CreateDirectory(dir);
         }
 
-        string json = JsonSerializer.Serialize(batches, JsonOptions);
+        string json = JsonHelper.Serialize(batches);
         string tempPath = HistoryFilePath + ".tmp";
-        File.WriteAllText(tempPath, json);
-        File.Move(tempPath, HistoryFilePath, overwrite: true);
+        File.WriteAllText(tempPath, json, Encoding.UTF8);
+        if (File.Exists(HistoryFilePath))
+        {
+            File.Delete(HistoryFilePath);
+        }
+
+        File.Move(tempPath, HistoryFilePath);
     }
 
     public void AddBatch(RenameBatch batch)
@@ -152,7 +150,7 @@ public class HistoryService
         if (restored > 0 || skipped == 0)
         {
             batch.Undone = true;
-            batch.UndoneAt = DateTimeOffset.Now;
+            batch.UndoneAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             SaveAll(batches);
         }
 

@@ -1,18 +1,17 @@
 # Zquick
 
-轻量高效的 **Windows Explorer 右键级联菜单工具箱**（C# .NET 8 WinForms），将常用的目录结构查看、按文件夹名重命名子文件、批量加/去前缀、7-Zip 批量压缩、FFmpeg 视频无损旋转及自定义脚本整合到一个可扩展的二级右键菜单中，支持可视化菜单管理、重命名预览确认与一键逆序撤销。
+极轻量的 **Windows Explorer 右键级联菜单工具箱**（基于系统原生 .NET Framework 4.8 WinForms，单文件仅 ~150 KB、安装包仅 ~1 MB，Windows 10/11 零运行库开箱即用，支持 Per-Monitor V2 高分辨率缩放），将目录结构查看、按文件夹名重命名子文件、批量加/去前缀、7-Zip 批量压缩、FFmpeg 视频无损旋转及自定义脚本整合到一个可扩展的二级右键菜单中，支持可视化菜单管理、重命名预览确认与一键逆序撤销。
 
 ---
 
 ## 一、下载与安装
 
-前往 [GitHub Releases](https://github.com/mcxen/Zquick/releases) 下载最新安装包或便携版：
+前往 [GitHub Releases](https://github.com/mcxen/Zquick/releases) 下载最新版：
 
-| 分发包 | 适用场景 | 说明 |
+| 分发包 | 体积 | 适用场景 |
 | :--- | :--- | :--- |
-| **`Zquick-Setup-v*-win-x64.exe`**（推荐） | 普通用户直接安装 | Windows 安装向导，免运行库，支持安装时自动注册右键菜单、卸载时自动清理注册表 |
-| **`Zquick-Portable-v*-win-x64.zip`** | U盘/免安装使用 | 独立单文件 `Zquick.exe`，无需预装 .NET 8 Runtime |
-| **`Zquick-Light-v*-win-x64.zip`** | 已装 .NET 8 环境 | 体积极小的单文件版，需系统装有 .NET 8 Desktop Runtime |
+| **`Zquick-Setup-v*-win-x64.exe`**（推荐） | ~1 MB | Windows 安装向导，支持安装时自动注册右键菜单、卸载时自动清理注册表 |
+| **`Zquick-Portable-v*-win-x64.zip`** | ~100 KB | 绿色单文件便携版，解压 `Zquick.exe` 即用（Windows 10/11 免装任何运行库） |
 
 ---
 
@@ -54,17 +53,16 @@
 需要 [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)（打包安装包需另装 [Inno Setup 6](https://jrsoftware.org/isinfo.php)）：
 
 ```bat
-build.bat              :: 编译轻量单文件版 (publish\light\Zquick.exe)
-build.bat standalone   :: 编译独立单文件版 (publish\standalone\Zquick.exe)
+build.bat              :: 编译轻量单文件版 (publish\Zquick.exe)
 build.bat installer    :: 编译并生成 Windows 安装包 (dist\)
 ```
 
 ### 版本管理与自动 Release
-项目遵循 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)，推送以 `v` 开头的 Git 标签即可自动触发 GitHub Actions (`release.yml`) 在 `windows-latest` 上编译全部版本并发布 GitHub Release：
+项目遵循 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)，推送以 `v` 开头的 Git 标签即可自动触发 GitHub Actions (`release.yml`) 在 `windows-latest` 上编译并发布 GitHub Release：
 
 ```bash
-git tag -a v1.0.1 -m "Release v1.0.1"
-git push origin v1.0.1
+git tag -a v1.0.2 -m "Release v1.0.2"
+git push origin v1.0.2
 ```
 
 ---

@@ -2,18 +2,26 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
     <RootNamespace>Zquick</RootNamespace>
     <AssemblyName>Zquick</AssemblyName>
     <Product>Zquick</Product>
     <Description>Windows Explorer 右键级联菜单工具箱与文件夹批量处理工具</Description>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <FileVersion>1.0.1.0</FileVersion>
     <ApplicationIcon>Assets\zquick.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <UseWindowsForms>true</UseWindowsForms>
-    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Prefer32Bit>false</Prefer32Bit>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="System.Web.Extensions" />
+  </ItemGroup>
 
 </Project>

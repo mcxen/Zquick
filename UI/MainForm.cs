@@ -43,33 +43,36 @@ public class MainForm : Form
         UiHelper.ApplyFormDefaults(
             this,
             $"Zquick v{Program.GetDisplayVersion()} - 资源管理器右键快捷工具箱",
-            new Size(980, 660));
-        MinimumSize = new Size(820, 540);
+            new Size(1060, 700),
+            new Size(840, 560));
 
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(12),
+            Padding = UiHelper.SPad(12),
             RowCount = 2,
             ColumnCount = 1
         };
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        // 顶部状态栏
+        // 顶部状态栏（AutoSize 随 DPI 缩放自动撑开，杜绝裁切）
         var topPanel = new Panel
         {
             Dock = DockStyle.Top,
-            Height = 62,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             BorderStyle = BorderStyle.FixedSingle,
             BackColor = Color.FromArgb(247, 249, 252),
-            Padding = new Padding(12, 8, 12, 8),
-            Margin = new Padding(0, 0, 0, 10)
+            Padding = UiHelper.SPad(12, 10, 12, 10),
+            Margin = UiHelper.SPad(0, 0, 0, 10)
         };
 
         var topGrid = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             ColumnCount = 2,
             RowCount = 1
         };
@@ -79,6 +82,8 @@ public class MainForm : Form
         var titleStack = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             RowCount = 2,
             ColumnCount = 1
         };
@@ -95,40 +100,30 @@ public class MainForm : Form
         {
             AutoSize = true,
             ForeColor = Color.DimGray,
-            Margin = new Padding(0, 3, 0, 0)
+            Margin = UiHelper.SPad(0, 4, 0, 0)
         };
         titleStack.Controls.Add(lblAppTitle, 0, 0);
         titleStack.Controls.Add(_lblMenuStatus, 0, 1);
 
         var topBtns = new FlowLayoutPanel
         {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.RightToLeft,
+            Anchor = AnchorStyles.Right | AnchorStyles.Top,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
             AutoSize = true,
-            Padding = new Padding(0, 6, 0, 0)
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Margin = UiHelper.SPad(12, 4, 0, 0)
         };
-        _btnUninstallMenu = new Button
-        {
-            Text = "卸载右键菜单",
-            Width = 115,
-            Height = 32
-        };
-        _btnUninstallMenu.Click += OnUninstallContextMenuClick;
 
-        _btnSyncMenu = new Button
-        {
-            Text = "同步到右键菜单",
-            Width = 135,
-            Height = 32,
-            BackColor = Color.FromArgb(0, 103, 192),
-            ForeColor = Color.White,
-            FlatStyle = FlatStyle.Flat
-        };
-        _btnSyncMenu.FlatAppearance.BorderSize = 0;
+        _btnSyncMenu = UiHelper.CreateButton("同步到右键菜单", 138, 34, primary: true);
         _btnSyncMenu.Click += OnSyncContextMenuClick;
 
-        topBtns.Controls.Add(_btnUninstallMenu);
+        _btnUninstallMenu = UiHelper.CreateButton("卸载右键菜单", 122, 34);
+        _btnUninstallMenu.Margin = new Padding(0);
+        _btnUninstallMenu.Click += OnUninstallContextMenuClick;
+
         topBtns.Controls.Add(_btnSyncMenu);
+        topBtns.Controls.Add(_btnUninstallMenu);
 
         topGrid.Controls.Add(titleStack, 0, 0);
         topGrid.Controls.Add(topBtns, 1, 0);
@@ -136,10 +131,14 @@ public class MainForm : Form
         root.Controls.Add(topPanel, 0, 0);
 
         // 主选项卡
-        var tabs = new TabControl { Dock = DockStyle.Fill };
+        var tabs = new TabControl
+        {
+            Dock = DockStyle.Fill,
+            Padding = new Point(UiHelper.S(12), UiHelper.S(5))
+        };
 
         // ---------- Tab 1: 右键菜单管理 ----------
-        var tabActions = new TabPage("右键菜单管理") { Padding = new Padding(10) };
+        var tabActions = new TabPage("右键菜单管理") { Padding = UiHelper.SPad(10) };
         var tabActionsLayout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -154,16 +153,17 @@ public class MainForm : Form
         {
             Dock = DockStyle.Fill,
             AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
             WrapContents = true,
-            Margin = new Padding(0, 0, 0, 8)
+            Margin = UiHelper.SPad(0, 0, 0, 8)
         };
-        var btnAdd = new Button { Text = "新增动作", Width = 88, Height = 29 };
-        var btnEdit = new Button { Text = "编辑", Width = 72, Height = 29 };
-        var btnDelete = new Button { Text = "删除", Width = 72, Height = 29 };
-        var btnMoveUp = new Button { Text = "上移", Width = 70, Height = 29 };
-        var btnMoveDown = new Button { Text = "下移", Width = 70, Height = 29 };
-        var btnTestRun = new Button { Text = "测试运行...", Width = 96, Height = 29 };
-        var btnRestoreDefault = new Button { Text = "恢复默认列表", Width = 108, Height = 29 };
+        Button btnAdd = UiHelper.CreateButton("新增动作", 88, 30);
+        Button btnEdit = UiHelper.CreateButton("编辑", 72, 30);
+        Button btnDelete = UiHelper.CreateButton("删除", 72, 30);
+        Button btnMoveUp = UiHelper.CreateButton("上移", 72, 30);
+        Button btnMoveDown = UiHelper.CreateButton("下移", 72, 30);
+        Button btnTestRun = UiHelper.CreateButton("测试运行...", 98, 30);
+        Button btnRestoreDefault = UiHelper.CreateButton("恢复默认列表", 112, 30);
 
         btnAdd.Click += OnAddActionClick;
         btnEdit.Click += OnEditActionClick;
@@ -182,12 +182,44 @@ public class MainForm : Form
         _gridActions = new DataGridView { Dock = DockStyle.Fill };
         UiHelper.StyleGrid(_gridActions, readOnly: false);
         _gridActions.Columns.AddRange(
-            new DataGridViewCheckBoxColumn { HeaderText = "启用", Width = 48 },
-            new DataGridViewCheckBoxColumn { HeaderText = "分割线", Width = 58 },
-            new DataGridViewTextBoxColumn { HeaderText = "菜单名称", Width = 250, ReadOnly = true },
-            new DataGridViewTextBoxColumn { HeaderText = "动作类型", Width = 115, ReadOnly = true },
-            new DataGridViewTextBoxColumn { HeaderText = "参数摘要", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, ReadOnly = true },
-            new DataGridViewTextBoxColumn { HeaderText = "ID", Width = 135, ReadOnly = true });
+            new DataGridViewCheckBoxColumn
+            {
+                HeaderText = "启用",
+                Width = UiHelper.S(64),
+                MinimumWidth = UiHelper.S(58),
+                FlatStyle = FlatStyle.Standard
+            },
+            new DataGridViewCheckBoxColumn
+            {
+                HeaderText = "分割线",
+                Width = UiHelper.S(76),
+                MinimumWidth = UiHelper.S(70),
+                FlatStyle = FlatStyle.Standard
+            },
+            new DataGridViewTextBoxColumn
+            {
+                HeaderText = "菜单名称",
+                Width = UiHelper.S(250),
+                ReadOnly = true
+            },
+            new DataGridViewTextBoxColumn
+            {
+                HeaderText = "动作类型",
+                Width = UiHelper.S(125),
+                ReadOnly = true
+            },
+            new DataGridViewTextBoxColumn
+            {
+                HeaderText = "参数摘要",
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+                ReadOnly = true
+            },
+            new DataGridViewTextBoxColumn
+            {
+                HeaderText = "ID",
+                Width = UiHelper.S(155),
+                ReadOnly = true
+            });
 
         _gridActions.CurrentCellDirtyStateChanged += (_, _) =>
         {
@@ -210,26 +242,35 @@ public class MainForm : Form
         {
             AutoSize = true,
             ForeColor = Color.DimGray,
-            Margin = new Padding(0, 6, 0, 0)
+            Margin = UiHelper.SPad(0, 6, 0, 0)
         };
         tabActionsLayout.Controls.Add(_lblActionLimitHint, 0, 2);
         tabActions.Controls.Add(tabActionsLayout);
 
         // ---------- Tab 2: 全局设置 ----------
-        var tabSettings = new TabPage("全局设置") { Padding = new Padding(14) };
+        var tabSettings = new TabPage("全局设置") { Padding = UiHelper.SPad(14) };
         var settingsLayout = new TableLayoutPanel
         {
             Dock = DockStyle.Top,
             ColumnCount = 3,
             AutoSize = true
         };
-        settingsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 155));
+        settingsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         settingsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        settingsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 185));
+        settingsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
         _txtRootTitle = new TextBox { Dock = DockStyle.Fill };
-        _chkRegFolder = new CheckBox { Text = "右键点击【文件夹】时显示", AutoSize = true };
-        _chkRegBackground = new CheckBox { Text = "右键点击【文件夹内空白处】时显示", AutoSize = true };
+        _chkRegFolder = new CheckBox
+        {
+            Text = "右键点击【文件夹】时显示",
+            AutoSize = true,
+            Margin = UiHelper.SPad(0, 0, 12, 0)
+        };
+        _chkRegBackground = new CheckBox
+        {
+            Text = "右键点击【文件夹内空白处】时显示",
+            AutoSize = true
+        };
         _txtSevenZip = new TextBox { Dock = DockStyle.Fill };
         _txtFfmpeg = new TextBox { Dock = DockStyle.Fill };
         _chkConfirmByDefault = new CheckBox { Text = "新建重命名动作默认开启「执行前预览确认」", AutoSize = true };
@@ -241,19 +282,20 @@ public class MainForm : Form
         regPosPanel.Controls.AddRange(new Control[] { _chkRegFolder, _chkRegBackground });
         AddSettingRow(settingsLayout, 1, "右键注册位置：", regPosPanel, null);
 
-        var sevenZipBtns = CreatePathButtons(
+        Control sevenZipBtns = CreatePathButtons(
             onBrowse: () => BrowseExe(_txtSevenZip, "选择 7z.exe", "7-Zip (7z.exe)|7z.exe|所有文件 (*.*)|*.*"),
             onDetect: () => AutoDetectTool(_txtSevenZip, "7z.exe", @"C:\Program Files\7-Zip\7z.exe", @"C:\Program Files (x86)\7-Zip\7z.exe"));
         AddSettingRow(settingsLayout, 2, "7-Zip (7z.exe) 路径：", _txtSevenZip, sevenZipBtns);
 
-        var ffmpegBtns = CreatePathButtons(
+        Control ffmpegBtns = CreatePathButtons(
             onBrowse: () => BrowseExe(_txtFfmpeg, "选择 ffmpeg.exe", "FFmpeg (ffmpeg.exe)|ffmpeg.exe|所有文件 (*.*)|*.*"),
-            onDetect: () => AutoDetectTool(_txtFfmpeg, "ffmpeg.exe", Path.Combine(AppContext.BaseDirectory, "ffmpeg.exe"), @"C:\ffmpeg\bin\ffmpeg.exe"));
+            onDetect: () => AutoDetectTool(_txtFfmpeg, "ffmpeg.exe", Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe"), @"C:\ffmpeg\bin\ffmpeg.exe"));
         AddSettingRow(settingsLayout, 3, "FFmpeg 路径：", _txtFfmpeg, ffmpegBtns);
 
         AddSettingRow(settingsLayout, 4, "重命名确认策略：", _chkConfirmByDefault, null);
 
-        var btnOpenDataDir = new Button { Text = "打开配置目录", Width = 110, Height = 27 };
+        Button btnOpenDataDir = UiHelper.CreateButton("打开配置目录", 114, 28);
+        btnOpenDataDir.Margin = UiHelper.SPad(6, 2, 0, 2);
         btnOpenDataDir.Click += (_, _) =>
         {
             Process.Start(new ProcessStartInfo
@@ -268,11 +310,12 @@ public class MainForm : Form
         {
             Dock = DockStyle.Top,
             FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
             AutoSize = true,
-            Padding = new Padding(155, 16, 0, 0)
+            Padding = UiHelper.SPad(0, 16, 0, 0)
         };
-        var btnSaveSettings = new Button { Text = "保存设置", Width = 100, Height = 32 };
-        var btnSaveAndSync = new Button { Text = "保存并同步右键菜单", Width = 155, Height = 32 };
+        Button btnSaveSettings = UiHelper.CreateButton("保存设置", 104, 34);
+        Button btnSaveAndSync = UiHelper.CreateButton("保存并同步右键菜单", 162, 34, primary: true);
         btnSaveSettings.Click += (_, _) =>
         {
             ApplySettingsFromUi();
@@ -294,21 +337,20 @@ public class MainForm : Form
                    "在 Windows 10 中直接显示在一级右键；在 Windows 11 中位于「显示更多选项」（Shift+右键）内。",
             AutoSize = true,
             ForeColor = Color.DimGray,
-            Padding = new Padding(155, 12, 0, 0)
+            Padding = UiHelper.SPad(0, 12, 0, 0)
         };
 
         var settingsContainer = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
         settingsContainer.Controls.Add(win11Hint);
         settingsContainer.Controls.Add(settingsBtnBar);
         settingsContainer.Controls.Add(settingsLayout);
-        // 调整 Dock = Top 的堆叠顺序（后加的在上方）
         settingsContainer.Controls.SetChildIndex(win11Hint, 0);
         settingsContainer.Controls.SetChildIndex(settingsBtnBar, 1);
         settingsContainer.Controls.SetChildIndex(settingsLayout, 2);
         tabSettings.Controls.Add(settingsContainer);
 
         // ---------- Tab 3: 撤销历史 ----------
-        var tabHistory = new TabPage("撤销历史") { Padding = new Padding(10) };
+        var tabHistory = new TabPage("撤销历史") { Padding = UiHelper.SPad(10) };
         var historyLayout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -322,11 +364,12 @@ public class MainForm : Form
         {
             Dock = DockStyle.Fill,
             AutoSize = true,
-            Margin = new Padding(0, 0, 0, 8)
+            WrapContents = true,
+            Margin = UiHelper.SPad(0, 0, 0, 8)
         };
-        var btnRefreshHist = new Button { Text = "刷新", Width = 75, Height = 29 };
-        var btnUndoBatch = new Button { Text = "撤销选中批次", Width = 115, Height = 29 };
-        var btnClearHist = new Button { Text = "清空历史", Width = 90, Height = 29 };
+        Button btnRefreshHist = UiHelper.CreateButton("刷新", 78, 30);
+        Button btnUndoBatch = UiHelper.CreateButton("撤销选中批次", 118, 30);
+        Button btnClearHist = UiHelper.CreateButton("清空历史", 92, 30);
         btnRefreshHist.Click += (_, _) => BindHistoryBatches();
         btnUndoBatch.Click += OnUndoSelectedBatchClick;
         btnClearHist.Click += OnClearHistoryClick;
@@ -337,24 +380,24 @@ public class MainForm : Form
         {
             Dock = DockStyle.Fill,
             Orientation = Orientation.Horizontal,
-            SplitterDistance = 210
+            SplitterDistance = UiHelper.S(220)
         };
 
         _gridHistoryBatches = new DataGridView { Dock = DockStyle.Fill };
         UiHelper.StyleGrid(_gridHistoryBatches, readOnly: true);
         _gridHistoryBatches.Columns.AddRange(
-            new DataGridViewTextBoxColumn { HeaderText = "时间", Width = 145 },
-            new DataGridViewTextBoxColumn { HeaderText = "动作", Width = 220 },
+            new DataGridViewTextBoxColumn { HeaderText = "时间", Width = UiHelper.S(165) },
+            new DataGridViewTextBoxColumn { HeaderText = "动作", Width = UiHelper.S(220) },
             new DataGridViewTextBoxColumn { HeaderText = "目标文件夹", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill },
-            new DataGridViewTextBoxColumn { HeaderText = "条目数", Width = 70 },
-            new DataGridViewTextBoxColumn { HeaderText = "状态", Width = 85 });
+            new DataGridViewTextBoxColumn { HeaderText = "条目数", Width = UiHelper.S(78) },
+            new DataGridViewTextBoxColumn { HeaderText = "状态", Width = UiHelper.S(92) });
         _gridHistoryBatches.SelectionChanged += (_, _) => BindSelectedBatchDetails();
         split.Panel1.Controls.Add(_gridHistoryBatches);
 
         _gridHistoryDetails = new DataGridView { Dock = DockStyle.Fill };
         UiHelper.StyleGrid(_gridHistoryDetails, readOnly: true);
         _gridHistoryDetails.Columns.AddRange(
-            new DataGridViewTextBoxColumn { HeaderText = "类型", Width = 65 },
+            new DataGridViewTextBoxColumn { HeaderText = "类型", Width = UiHelper.S(76) },
             new DataGridViewTextBoxColumn { HeaderText = "原路径", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill },
             new DataGridViewTextBoxColumn { HeaderText = "新路径", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill });
         split.Panel2.Controls.Add(_gridHistoryDetails);
@@ -547,8 +590,7 @@ public class MainForm : Form
 
         using var fbd = new FolderBrowserDialog
         {
-            Description = $"选择要运行「{_config.Actions[idx].Title}」的目标文件夹",
-            UseDescriptionForTitle = true
+            Description = $"选择要运行「{_config.Actions[idx].Title}」的目标文件夹"
         };
         if (fbd.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(fbd.SelectedPath))
         {
@@ -703,7 +745,7 @@ public class MainForm : Form
         foreach (RenameBatch batch in _historyBatches)
         {
             _gridHistoryBatches.Rows.Add(
-                batch.CreatedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                batch.CreatedAt,
                 batch.ActionTitle,
                 batch.TargetDirectory,
                 batch.Records.Count,
@@ -801,9 +843,17 @@ public class MainForm : Form
 
     private Control CreatePathButtons(Action onBrowse, Action onDetect)
     {
-        var panel = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, Margin = new Padding(4, 0, 0, 0) };
-        var btnBrowse = new Button { Text = "浏览...", Width = 78, Height = 27 };
-        var btnDetect = new Button { Text = "自动检测", Width = 86, Height = 27 };
+        var panel = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoSize = true,
+            Margin = UiHelper.SPad(6, 2, 0, 2)
+        };
+        Button btnBrowse = UiHelper.CreateButton("浏览...", 80, 28);
+        Button btnDetect = UiHelper.CreateButton("自动检测", 92, 28);
+        btnDetect.Margin = new Padding(0);
         btnBrowse.Click += (_, _) => onBrowse();
         btnDetect.Click += (_, _) => onDetect();
         panel.Controls.Add(btnBrowse);
@@ -846,14 +896,14 @@ public class MainForm : Form
             Text = labelText,
             AutoSize = true,
             Anchor = AnchorStyles.Left,
-            Margin = new Padding(0, 8, 6, 8)
+            Margin = UiHelper.SPad(0, 8, 8, 8)
         };
-        input.Margin = new Padding(0, 6, 4, 6);
+        input.Margin = UiHelper.SPad(0, 6, 4, 6);
         grid.Controls.Add(lbl, 0, row);
         grid.Controls.Add(input, 1, row);
         if (sideButton != null)
         {
-            sideButton.Margin = new Padding(4, 4, 0, 4);
+            sideButton.Margin = UiHelper.SPad(4, 4, 0, 4);
             grid.Controls.Add(sideButton, 2, row);
         }
     }
